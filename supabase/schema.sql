@@ -627,6 +627,44 @@ end $$;
 
 
 -- -----------------------------------------------------------------------------
+--  6.2.b Compatibilidad con una firma anterior
+--
+--  Algunas instalaciones o clientes viejos todavía llaman la RPC sin `p_tipo`.
+--  Esta sobrecarga conserva el comportamiento y evita el 404 de schema cache.
+--  Si el cliente no manda tipo, lo tratamos como `otro`.
+-- -----------------------------------------------------------------------------
+
+create or replace function public.crear_reporte_mapa(
+  p_id          uuid,
+  p_codigo      text,
+  p_titulo      text,
+  p_lat         float8,
+  p_lng         float8,
+  p_ciudad      text default 'Otra',
+  p_descripcion text default null,
+  p_contacto    text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, privado, pg_temp
+as $$
+begin
+  return public.crear_reporte_mapa(
+    p_id,
+    p_codigo,
+    'otro',
+    p_titulo,
+    p_lat,
+    p_lng,
+    p_ciudad,
+    p_descripcion,
+    p_contacto
+  );
+end $$;
+
+
+-- -----------------------------------------------------------------------------
 --  6.3 Quien creó un reporte lo marca como resuelto (o reactiva)
 -- -----------------------------------------------------------------------------
 
