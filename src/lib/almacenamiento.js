@@ -115,6 +115,18 @@ export function yaDenunciado(recurso, id) {
   return Boolean(denunciados[`${recurso}:${id}`]);
 }
 
+/** Igual que las denuncias: el servidor también lo impide, pero evita el viaje. */
+export function marcarConfirmado(id) {
+  const confirmados = leer('confirmados', {}) || {};
+  confirmados[id] = 1;
+  escribir('confirmados', confirmados);
+}
+
+export function yaConfirmado(id) {
+  const confirmados = leer('confirmados', {}) || {};
+  return Boolean(confirmados[id]);
+}
+
 // ---------------------------------------------------------------------------
 //  Caché de la última consulta
 //

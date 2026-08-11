@@ -170,7 +170,7 @@ export default function VistaPersonas() {
         </button>
       </div>
 
-      <AvisoPrivacidad compacto />
+      <AvisoPrivacidad />
 
       <div className="buscador">
         <label className="etiqueta" htmlFor="busqueda">

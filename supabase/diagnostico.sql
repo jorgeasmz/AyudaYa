@@ -32,7 +32,13 @@ with c as (
     (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public'
         and p.proname in ('crear_reporte_mapa','crear_registro_persona')) as firmas_creacion,
-    (select has_schema_privilege('anon','privado','USAGE')) as anon_ve_privado
+    (select has_schema_privilege('anon','privado','USAGE')) as anon_ve_privado,
+    (select count(*) from information_schema.columns
+      where table_name = 'reportes_mapa'
+        and column_name in ('direccion','confirmaciones')) as columnas_nuevas,
+    (select count(*) from information_schema.columns
+      where table_name = 'reportes_mapa'
+        and column_name in ('verificado','fuente_verificacion')) as columnas_retiradas
 )
 select * from (values
   ('anon puede leer las dos tablas',        (select lectura_anon    from c) = 2),
@@ -44,6 +50,8 @@ select * from (values
   -- Exactamente una firma por función. Una sobrecarga extra deja que un
   -- cliente con parámetros incompletos escriba datos incorrectos en silencio.
   ('una sola firma por función de creación', (select firmas_creacion from c) = 2),
-  ('anon NO ve el esquema privado',         (select anon_ve_privado from c) = false)
+  ('anon NO ve el esquema privado',         (select anon_ve_privado from c) = false),
+  ('existen direccion y confirmaciones',    (select columnas_nuevas from c) = 2),
+  ('la verificación manual ya no existe',   (select columnas_retiradas from c) = 0)
 ) as t(comprobacion, correcto)
 order by correcto, comprobacion;

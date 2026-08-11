@@ -12,18 +12,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { tipoDe, VISTA_INICIAL } from '../../lib/constantes.js';
+import {
+  tipoDe,
+  VISTA_INICIAL,
+  CONFIRMACIONES_DESTACADO,
+} from '../../lib/constantes.js';
 import { estadoEfectivo } from '../../lib/formato.js';
 
 /**
  * Icono como `divIcon` con un emoji: cero peticiones de imagen frente a las
  * dos que gasta el marcador por defecto de Leaflet (icono + sombra).
  */
-function crearIcono(tipo, verificado, caducado, pendiente) {
+function crearIcono(tipo, confirmado, caducado, pendiente) {
   const info = tipoDe(tipo);
   const clases = [
     'marcador',
-    verificado ? 'es-verificado' : '',
+    confirmado ? 'es-confirmado' : '',
     caducado ? 'es-caducado' : '',
     pendiente ? 'es-pendiente' : '',
   ]
@@ -32,7 +36,7 @@ function crearIcono(tipo, verificado, caducado, pendiente) {
 
   const sello = pendiente
     ? '<span class="marcador-sello es-espera">⏳</span>'
-    : verificado
+    : confirmado
       ? '<span class="marcador-sello">✓</span>'
       : '';
 
@@ -222,7 +226,7 @@ export default function Mapa({
       reportes
         .map(
           (r) =>
-            `${r.id}:${r.tipo}:${r.verificado ? 1 : 0}:${r.estado}:` +
+            `${r.id}:${r.tipo}:${r.confirmaciones || 0}:${r.estado}:` +
             `${r.actualizado_en}:${r._pendiente ? 1 : 0}`
         )
         .join('|'),
@@ -241,7 +245,7 @@ export default function Mapa({
       const caducado = estadoEfectivo(reporte) === 'caducado';
       const icono = crearIcono(
         reporte.tipo,
-        reporte.verificado,
+        (reporte.confirmaciones || 0) >= CONFIRMACIONES_DESTACADO,
         caducado,
         reporte._pendiente
       );

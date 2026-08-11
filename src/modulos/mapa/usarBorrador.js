@@ -22,6 +22,7 @@ const VACIO = {
   titulo: '',
   descripcion: '',
   ciudad: '',
+  direccion: '',
   contacto: '',
 };
 
@@ -35,6 +36,7 @@ function inicial() {
     titulo: String(guardado.titulo || ''),
     descripcion: String(guardado.descripcion || ''),
     ciudad: String(guardado.ciudad || ''),
+    direccion: String(guardado.direccion || ''),
     contacto: String(guardado.contacto || ''),
   };
 }

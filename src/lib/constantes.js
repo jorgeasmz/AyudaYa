@@ -50,6 +50,13 @@ export const TIPOS_REPORTE = [
     ayuda: 'Personas atrapadas, rescate en curso o solicitud urgente de ayuda',
   },
   {
+    valor: 'mascotas',
+    etiqueta: 'Mascotas',
+    emoji: '🐾',
+    color: '#0f766e',
+    ayuda: 'Animales perdidos, rescate, comida o refugio para mascotas',
+  },
+  {
     valor: 'otro',
     etiqueta: 'Necesidad o recurso',
     emoji: '📍',
@@ -90,8 +97,17 @@ export const VISTA_INICIAL = { centro: [4.7, -76.2], zoom: 8 };
 /** Tras 48 h sin actualizarse, un reporte se considera caducado. */
 export const HORAS_CADUCIDAD = 48;
 
-/** A partir de aquí el reporte se oculta solo (coincide con la policy de RLS). */
-export const UMBRAL_ABUSO = 5;
+/**
+ * Un reporte se oculta cuando las denuncias le sacan esta ventaja a las
+ * confirmaciones. Debe coincidir con las policies `lectura_publica_*`.
+ */
+export const UMBRAL_OCULTAR = 3;
+
+/** A partir de estas confirmaciones el reporte se destaca en el mapa. */
+export const CONFIRMACIONES_DESTACADO = 2;
+
+/** Radio para detectar reportes repetidos, en metros. */
+export const RADIO_DUPLICADOS = 150;
 
 /** Tope de registros por consulta. Si se alcanza, se avisa al usuario. */
 export const LIMITE_REPORTES = 800;

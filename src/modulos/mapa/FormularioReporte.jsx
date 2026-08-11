@@ -7,6 +7,8 @@ import { generarCodigo, generarId } from '../../lib/identificadores.js';
 import { encolar } from '../../lib/cola.js';
 import { interpretarError } from '../../lib/supabase.js';
 import Mensaje from '../../componentes/Mensaje.jsx';
+import CampoDireccion from './CampoDireccion.jsx';
+import AvisoRepetidos from './AvisoRepetidos.jsx';
 
 /**
  * Formulario de reporte.
@@ -24,6 +26,8 @@ export default function FormularioReporte({
   alCambiar,
   ubicacion,
   alPedirElegirEnMapa,
+  alElegirDireccion,
+  alConfirmarExistente,
   alUsarMiUbicacion,
   buscandoUbicacion,
   errorUbicacion,
@@ -34,7 +38,7 @@ export default function FormularioReporte({
   const [error, establecerError] = useState(null);
   const [resultado, establecerResultado] = useState(null);
 
-  const { tipo, titulo, descripcion, ciudad, contacto } = borrador;
+  const { tipo, titulo, descripcion, ciudad, direccion, contacto } = borrador;
   const tituloLimpio = recortar(titulo, 90);
   const puedeEnviar =
     tipo && tituloLimpio.length >= 3 && ciudad && ubicacion && !enviando;
@@ -58,6 +62,7 @@ export default function FormularioReporte({
       lat: ubicacion[0],
       lng: ubicacion[1],
       ciudad,
+      direccion: recortar(direccion, 140) || null,
       contacto: recortar(contacto, 60) || null,
     };
 
@@ -71,10 +76,10 @@ export default function FormularioReporte({
       lat: envio.lat,
       lng: envio.lng,
       ciudad: envio.ciudad,
+      direccion: envio.direccion,
       contacto: envio.contacto,
       estado: 'activo',
-      verificado: false,
-      fuente_verificacion: null,
+      confirmaciones: 0,
       reportes_abuso: 0,
       created_at: new Date().toISOString(),
       actualizado_en: new Date().toISOString(),
@@ -220,43 +225,6 @@ export default function FormularioReporte({
         <p className="ayuda">{descripcion.length}/400</p>
       </div>
 
-      <fieldset className="campo">
-        <legend className="etiqueta">
-          Ubicación <span className="obligatorio">*</span>
-        </legend>
-
-        <div className="botones-ubicacion">
-          <button
-            type="button"
-            className="boton boton-secundario"
-            onClick={alUsarMiUbicacion}
-            disabled={buscandoUbicacion}
-          >
-            {buscandoUbicacion ? 'Buscando…' : '📡 Usar mi ubicación'}
-          </button>
-          <button
-            type="button"
-            className="boton boton-secundario"
-            onClick={alPedirElegirEnMapa}
-          >
-            🗺️ Señalar en el mapa
-          </button>
-        </div>
-
-        {errorUbicacion && <p className="ayuda ayuda-error">{errorUbicacion}</p>}
-
-        {ubicacion ? (
-          <p className="ayuda ayuda-ok">
-            ✔ Ubicación marcada ({ubicacion[0].toFixed(5)}, {ubicacion[1].toFixed(5)})
-          </p>
-        ) : (
-          <p className="ayuda">
-            Todavía sin ubicación. Sin ella el reporte no sirve a quien busca ayuda
-            cerca.
-          </p>
-        )}
-      </fieldset>
-
       <div className="campo">
         <label className="etiqueta" htmlFor="ciudad">
           Ciudad <span className="obligatorio">*</span>
@@ -277,6 +245,44 @@ export default function FormularioReporte({
         </select>
       </div>
 
+      <CampoDireccion
+        valor={direccion}
+        alCambiarTexto={(texto) => alCambiar('direccion', texto)}
+        alElegirSugerencia={alElegirDireccion}
+        ciudad={ciudad}
+        ubicacionFijada={Boolean(ubicacion)}
+      />
+
+      <fieldset className="campo">
+        <legend className="etiqueta">Si no encuentras la dirección</legend>
+
+        <div className="botones-ubicacion">
+          <button
+            type="button"
+            className="boton boton-secundario"
+            onClick={alUsarMiUbicacion}
+            disabled={buscandoUbicacion}
+          >
+            {buscandoUbicacion ? 'Buscando…' : '📡 Usar mi ubicación'}
+          </button>
+          <button
+            type="button"
+            className="boton boton-secundario"
+            onClick={alPedirElegirEnMapa}
+          >
+            🗺️ Tocar el mapa
+          </button>
+        </div>
+
+        {errorUbicacion && <p className="ayuda ayuda-error">{errorUbicacion}</p>}
+
+        {!ubicacion && (
+          <p className="ayuda">
+            Hace falta un punto en el mapa para que quien ayuda sepa a dónde ir.
+          </p>
+        )}
+      </fieldset>
+
       <div className="campo">
         <label className="etiqueta" htmlFor="contacto">
           Teléfono de contacto (opcional)
@@ -294,6 +300,12 @@ export default function FormularioReporte({
         />
         <p className="ayuda">Este número será público. Déjalo vacío si prefieres.</p>
       </div>
+
+      <AvisoRepetidos
+        tipo={tipo}
+        ubicacion={ubicacion}
+        alConfirmarExistente={alConfirmarExistente}
+      />
 
       <button
         type="submit"

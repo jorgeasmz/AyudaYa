@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { tipoDe } from '../../lib/constantes.js';
+import { tipoDe, CONFIRMACIONES_DESTACADO } from '../../lib/constantes.js';
 import {
   contactoComoTelefono,
   contactoComoWhatsapp,
@@ -7,11 +7,17 @@ import {
   estadoEfectivo,
   tiempoRelativo,
 } from '../../lib/formato.js';
-import { denunciar, actualizarEstadoReporte } from '../../lib/api.js';
 import {
+  denunciar,
+  actualizarEstadoReporte,
+  confirmarReporte,
+} from '../../lib/api.js';
+import {
+  marcarConfirmado,
   marcarDenunciado,
   obtenerCodigo,
   olvidarCodigo,
+  yaConfirmado,
   yaDenunciado,
 } from '../../lib/almacenamiento.js';
 import { descartar } from '../../lib/cola.js';
@@ -31,7 +37,11 @@ export default function DetalleReporte({ reporte, alActualizar, alCerrar }) {
   const [denunciadoAqui, establecerDenunciadoAqui] = useState(() =>
     yaDenunciado('reporte_mapa', reporte.id)
   );
+  const [confirmadoAqui, establecerConfirmadoAqui] = useState(() =>
+    yaConfirmado(reporte.id)
+  );
 
+  const confirmaciones = reporte.confirmaciones || 0;
   const info = tipoDe(reporte.tipo);
   const estado = estadoEfectivo(reporte);
   const codigoPropio = obtenerCodigo('reporte_mapa', reporte.id);
@@ -62,6 +72,35 @@ export default function DetalleReporte({ reporte, alActualizar, alCerrar }) {
         marcarDenunciado('reporte_mapa', reporte.id);
         establecerDenunciadoAqui(true);
         establecerAviso('Ya habías reportado este contenido.');
+      } else {
+        establecerError(err);
+      }
+    } finally {
+      establecerAccionando(false);
+    }
+  }
+
+  async function alConfirmar() {
+    if (confirmadoAqui || accionando) return;
+
+    establecerAccionando(true);
+    establecerError(null);
+    try {
+      const total = await confirmarReporte(reporte.id);
+      marcarConfirmado(reporte.id);
+      establecerConfirmadoAqui(true);
+      alActualizar?.(reporte.id, {
+        confirmaciones: total,
+        actualizado_en: new Date().toISOString(),
+      });
+      establecerAviso('Gracias. Tu confirmación ayuda a que otros se fíen.');
+    } catch (bruto) {
+      const err = interpretarError(bruto);
+      // "Ya lo habías confirmado" no es un fallo, es el resultado esperado.
+      if (/ya habías confirmado/i.test(err.message)) {
+        marcarConfirmado(reporte.id);
+        establecerConfirmadoAqui(true);
+        establecerAviso('Ya habías confirmado este reporte.');
       } else {
         establecerError(err);
       }
@@ -139,14 +178,18 @@ export default function DetalleReporte({ reporte, alActualizar, alCerrar }) {
         {reporte._pendiente && (
           <span className="etiqueta-estado es-pendiente">⏳ Sin enviar todavía</span>
         )}
-        {reporte.verificado && (
-          <span className="etiqueta-estado es-verificado">
-            ✓ Verificado
-            {reporte.fuente_verificacion ? ` · ${reporte.fuente_verificacion}` : ''}
+        {confirmaciones > 0 && (
+          <span
+            className={`etiqueta-estado ${
+              confirmaciones >= CONFIRMACIONES_DESTACADO ? 'es-confirmado' : 'es-neutro'
+            }`}
+          >
+            ✓ Confirmado por {confirmaciones}{' '}
+            {confirmaciones === 1 ? 'persona' : 'personas'}
           </span>
         )}
-        {!reporte.verificado && !reporte._pendiente && (
-          <span className="etiqueta-estado es-neutro">Sin verificar</span>
+        {confirmaciones === 0 && !reporte._pendiente && (
+          <span className="etiqueta-estado es-neutro">Sin confirmar</span>
         )}
         {estado === 'resuelto' && (
           <span className="etiqueta-estado es-resuelto">Resuelto</span>
@@ -170,12 +213,18 @@ export default function DetalleReporte({ reporte, alActualizar, alCerrar }) {
           señal; nadie más puede verlo aún.
         </p>
       ) : (
-        !reporte.verificado && (
+        confirmaciones === 0 && (
           <p className="nota-verificacion">
-            Nadie ha confirmado este reporte todavía. Confírmalo por tu cuenta antes de
+            Nadie más ha confirmado este reporte todavía. Si puedes, llama antes de
             desplazarte.
           </p>
         )
+      )}
+
+      {reporte.direccion && (
+        <p className="detalle-direccion">
+          <span aria-hidden="true">📍</span> {reporte.direccion}
+        </p>
       )}
 
       {reporte.descripcion && (
@@ -216,6 +265,17 @@ export default function DetalleReporte({ reporte, alActualizar, alCerrar }) {
         >
           🧭 Cómo llegar
         </a>
+
+        {!reporte._pendiente && (
+          <button
+            type="button"
+            className="boton boton-exito"
+            onClick={alConfirmar}
+            disabled={accionando || confirmadoAqui}
+          >
+            {confirmadoAqui ? '✓ Ya lo confirmaste' : '👍 Sigue aquí, lo confirmo'}
+          </button>
+        )}
 
         {codigoPropio && !reporte._pendiente && (
           <button

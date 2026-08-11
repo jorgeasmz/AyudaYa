@@ -87,6 +87,13 @@ create table if not exists privado.envios (
 create index if not exists idx_envios_busqueda
   on privado.envios (accion, huella, creado_en desc);
 
+create table if not exists privado.confirmaciones (
+  huella     text not null,
+  recurso_id uuid not null,
+  creado_en  timestamptz not null default now(),
+  primary key (huella, recurso_id)
+);
+
 create table if not exists privado.denuncias (
   huella     text not null,
   recurso    text not null,
@@ -102,8 +109,14 @@ create table if not exists privado.denuncias (
 
 do $$ begin
   create type public.tipo_reporte as enum
-    ('agua','alimento','refugio','atencion_medica','via_bloqueada','rescate','otro');
+    ('agua','alimento','refugio','atencion_medica','via_bloqueada','rescate',
+     'mascotas','otro');
 exception when duplicate_object then null; end $$;
+
+-- Para instalaciones que ya tenían el enum sin `mascotas`.
+-- Desde PostgreSQL 12 esto puede ir dentro de una transacción siempre que el
+-- valor nuevo no se use hasta que haya confirmado, que es el caso aquí.
+alter type public.tipo_reporte add value if not exists 'mascotas' before 'otro';
 
 do $$ begin
   create type public.estado_reporte as enum ('activo','resuelto','caducado');
@@ -326,10 +339,15 @@ create table if not exists public.reportes_mapa (
   lat                 float8 not null,
   lng                 float8 not null,
   ciudad              text not null default 'Otra',
+  -- Dirección exacta. En un reporte del mapa es información útil y pública:
+  -- el pin ya marca el punto, y "Carrera 5 #12-34" ahorra tiempo a quien va.
+  direccion           text,
   contacto            text,
   estado              public.estado_reporte not null default 'activo',
-  verificado          boolean not null default false,
-  fuente_verificacion text,
+  -- Cuánta gente ha confirmado que esto sigue siendo cierto. Sustituye a la
+  -- verificación por una autoridad: aquí nadie tiene tiempo de verificar nada,
+  -- así que la señal la da quien está en el sitio.
+  confirmaciones      int not null default 0,
   reportes_abuso      int not null default 0,
   created_at          timestamptz not null default now(),
   actualizado_en      timestamptz not null default now(),
@@ -340,16 +358,13 @@ create table if not exists public.reportes_mapa (
     check (descripcion is null or char_length(descripcion) <= 400),
   constraint chk_contacto_largo
     check (contacto is null or char_length(contacto) <= 60),
+  constraint chk_direccion_larga
+    check (direccion is null or char_length(direccion) <= 140),
   -- Caja delimitadora de Colombia continental + insular: rechaza coordenadas basura
   constraint chk_lat check (lat between -4.5 and 16.0),
   constraint chk_lng check (lng between -82.5 and -66.0),
   constraint chk_abuso check (reportes_abuso >= 0),
-  -- Un reporte solo puede estar verificado si dice QUIÉN lo verificó
-  constraint chk_verificacion check (
-    (verificado = false and fuente_verificacion is null)
-    or
-    (verificado = true and char_length(btrim(coalesce(fuente_verificacion, ''))) >= 3)
-  )
+  constraint chk_confirmaciones check (confirmaciones >= 0)
 );
 
 create index if not exists idx_reportes_estado
@@ -387,8 +402,9 @@ create table if not exists public.personas_busqueda (
   constraint chk_edad
     check (edad_aprox is null or edad_aprox between 0 and 120),
   -- 80 caracteres: alcanza para "Barrio El Poblado, comuna 3", no para una dirección
+  -- Admite dirección exacta, no solo barrio: 140 caracteres dan de sobra.
   constraint chk_zona_larga
-    check (zona_barrio is null or char_length(zona_barrio) <= 80),
+    check (zona_barrio is null or char_length(zona_barrio) <= 140),
   constraint chk_desc_persona_larga
     check (descripcion is null or char_length(descripcion) <= 400),
   constraint chk_contacto_reportante
@@ -415,6 +431,42 @@ exception when others then
 end $$;
 
 
+-- ---------------------------------------------------------------------------
+--  Migración para bases que ya existían.
+--
+--  `create table if not exists` no toca una tabla ya creada, así que las
+--  columnas y restricciones nuevas hay que añadirlas aparte. Todo esto es
+--  idempotente: se puede reejecutar sin miedo.
+-- ---------------------------------------------------------------------------
+
+alter table public.reportes_mapa add column if not exists direccion text;
+alter table public.reportes_mapa
+  add column if not exists confirmaciones int not null default 0;
+
+-- La verificación manual se retiró: nadie iba a verificar cientos de reportes.
+alter table public.reportes_mapa drop column if exists verificado;
+alter table public.reportes_mapa drop column if exists fuente_verificacion;
+
+do $$ begin
+  alter table public.reportes_mapa
+    add constraint chk_direccion_larga
+    check (direccion is null or char_length(direccion) <= 140);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  alter table public.reportes_mapa
+    add constraint chk_confirmaciones check (confirmaciones >= 0);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  alter table public.personas_busqueda drop constraint chk_zona_larga;
+exception when undefined_object then null; end $$;
+do $$ begin
+  alter table public.personas_busqueda
+    add constraint chk_zona_larga
+    check (zona_barrio is null or char_length(zona_barrio) <= 140);
+exception when duplicate_object then null; end $$;
+
 -- =============================================================================
 --  5. ROW LEVEL SECURITY + PRIVILEGIOS
 -- -----------------------------------------------------------------------------
@@ -439,17 +491,21 @@ grant update, delete on public.personas_busqueda to authenticated;
 -- Un registro con más de 5 denuncias desaparece automáticamente de la vista
 -- pública hasta que un moderador lo revise.
 
+-- Un reporte desaparece cuando las denuncias le sacan 3 a las confirmaciones.
+-- Es un saldo, no un contador suelto: así una sola persona malintencionada no
+-- puede tumbar un reporte que otras diez han confirmado, y a la vez un reporte
+-- falso y sin apoyo se cae con tres avisos.
 drop policy if exists lectura_publica_reportes on public.reportes_mapa;
 create policy lectura_publica_reportes
   on public.reportes_mapa for select
   to anon, authenticated
-  using (public.es_admin() or reportes_abuso <= 5);
+  using (public.es_admin() or (reportes_abuso - confirmaciones) < 3);
 
 drop policy if exists lectura_publica_personas on public.personas_busqueda;
 create policy lectura_publica_personas
   on public.personas_busqueda for select
   to anon, authenticated
-  using (public.es_admin() or reportes_abuso <= 5);
+  using (public.es_admin() or reportes_abuso < 3);
 
 -- --- Moderación ----------------------------------------------------------
 -- No existe policy de INSERT: el navegador NO puede insertar directamente,
@@ -556,7 +612,8 @@ create or replace function public.crear_reporte_mapa(
   p_lng         float8,
   p_ciudad      text default 'Otra',
   p_descripcion text default null,
-  p_contacto    text default null
+  p_contacto    text default null,
+  p_direccion   text default null
 )
 returns uuid
 language plpgsql
@@ -595,7 +652,9 @@ begin
     'Has enviado varios reportes en pocos minutos. Espera un momento e inténtalo de nuevo.'
   );
 
-  insert into public.reportes_mapa (id, tipo, titulo, descripcion, lat, lng, ciudad, contacto)
+  insert into public.reportes_mapa (
+    id, tipo, titulo, descripcion, lat, lng, ciudad, contacto, direccion
+  )
   values (
     p_id,
     p_tipo::public.tipo_reporte,
@@ -604,7 +663,8 @@ begin
     round(p_lat::numeric, 6)::float8,   -- ~11 cm de precisión: suficiente y menos bytes
     round(p_lng::numeric, 6)::float8,
     coalesce(privado.limpiar_texto(p_ciudad, 40), 'Otra'),
-    privado.limpiar_texto(p_contacto, 60)
+    privado.limpiar_texto(p_contacto, 60),
+    privado.limpiar_texto(p_direccion, 140)
   )
   on conflict (id) do nothing;
 
@@ -737,7 +797,7 @@ begin
     p_tipo_registro::public.tipo_registro_persona,
     v_nombre,
     p_edad_aprox,
-    privado.limpiar_texto(p_zona_barrio, 80),
+    privado.limpiar_texto(p_zona_barrio, 140),
     coalesce(privado.limpiar_texto(p_ciudad, 40), 'Otra'),
     privado.limpiar_texto(p_descripcion, 400),
     v_contacto
@@ -818,6 +878,58 @@ end $$;
 
 
 -- -----------------------------------------------------------------------------
+--  6.6.b Confirmar que un reporte sigue siendo cierto
+--
+--  Reemplaza a la verificación por una autoridad. Hace tres cosas de una vez:
+--    1. Sube el contador que la gente ve ("confirmado por 4 personas").
+--    2. Compensa denuncias en la fórmula de visibilidad.
+--    3. Refresca `actualizado_en`, así que un reporte confirmado no caduca a
+--       las 48 h y uno que nadie confirma se apaga solo.
+--
+--  Una confirmación por IP y reporte, igual que las denuncias.
+-- -----------------------------------------------------------------------------
+
+create or replace function public.confirmar_reporte(p_id uuid)
+returns int
+language plpgsql
+security definer
+set search_path = public, privado, pg_temp
+as $$
+declare
+  v_huella text;
+  v_total  int;
+begin
+  perform privado.exigir_limite(
+    'confirmacion', 30, interval '10 minutes',
+    'Has confirmado muchos reportes seguidos. Espera un momento.'
+  );
+
+  v_huella := privado.huella_ip();
+
+  insert into privado.confirmaciones (huella, recurso_id)
+  values (v_huella, p_id)
+  on conflict do nothing;
+
+  if not found then
+    raise exception 'Ya habías confirmado este reporte. Gracias.'
+      using errcode = 'P0001';
+  end if;
+
+  update public.reportes_mapa
+     set confirmaciones = confirmaciones + 1,
+         actualizado_en = now()
+   where reportes_mapa.id = p_id
+  returning reportes_mapa.confirmaciones into v_total;
+
+  if v_total is null then
+    raise exception 'Ese reporte ya no existe.' using errcode = 'P0001';
+  end if;
+
+  return v_total;
+end $$;
+
+
+-- -----------------------------------------------------------------------------
 --  6.7 Denunciar contenido falso / resuelto  (una vez por dispositivo-IP)
 -- -----------------------------------------------------------------------------
 
@@ -888,7 +1000,7 @@ begin
        and p.proname in (
          'crear_reporte_mapa', 'actualizar_estado_reporte',
          'crear_registro_persona', 'marcar_persona_encontrada',
-         'eliminar_registro_persona', 'reportar_abuso',
+         'eliminar_registro_persona', 'reportar_abuso', 'confirmar_reporte',
          'marcar_caducados', 'es_admin', 'normalizar_texto'
        )
   loop

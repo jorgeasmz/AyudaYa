@@ -28,10 +28,10 @@ function comoReporte(elemento) {
     lat: d.lat,
     lng: d.lng,
     ciudad: d.ciudad,
+    direccion: d.direccion,
     contacto: d.contacto,
     estado: 'activo',
-    verificado: false,
-    fuente_verificacion: null,
+    confirmaciones: 0,
     reportes_abuso: 0,
     created_at: elemento.encoladoEn,
     actualizado_en: elemento.encoladoEn,
@@ -115,7 +115,7 @@ export function useReportes({ registrarFallo, registrarExito }) {
 
           // La RLS oculta lo que pasa de 5 denuncias, pero un UPDATE que cruza
           // ese umbral igual nos llega: lo retiramos a mano.
-          if ((nuevo.reportes_abuso ?? 0) > 5) {
+          if ((nuevo.reportes_abuso ?? 0) - (nuevo.confirmaciones ?? 0) >= 3) {
             return indice === -1 ? previos : previos.filter((r) => r.id !== nuevo.id);
           }
 

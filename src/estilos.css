@@ -658,6 +658,61 @@ code {
 }
 
 /* ========================================================================
+   Campo de dirección con sugerencias
+   ======================================================================== */
+
+.campo-direccion {
+  position: relative;
+}
+
+.lista-sugerencias {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 2px solid var(--borde);
+  border-radius: var(--radio-chico);
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+  /* Con muchos resultados no debe empujar el resto del formulario. */
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.lista-sugerencias li + li {
+  border-top: 1px solid var(--papel-hundido);
+}
+
+.sugerencia {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: var(--toque);
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sugerencia:active,
+.sugerencia:focus-visible {
+  background: #eff6ff;
+}
+
+.sugerencia-titulo {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.sugerencia-detalle {
+  font-size: 0.8rem;
+  color: var(--tinta-tenue);
+  overflow-wrap: anywhere;
+}
+
+/* ========================================================================
    Filtros del mapa
    ======================================================================== */
 
@@ -853,10 +908,10 @@ code {
   line-height: 1;
 }
 
-/* Borde dorado y sello: la señal visual de "esto lo confirmó alguien". */
-.marcador.es-verificado {
-  border-color: var(--oro);
-  box-shadow: 0 0 0 2px #fde68a, 0 2px 6px rgb(15 23 42 / 35%);
+/* Anillo verde y sello: varias personas han confirmado que sigue ahí. */
+.marcador.es-confirmado {
+  border-color: var(--exito);
+  box-shadow: 0 0 0 2px #bbf7d0, 0 2px 6px rgb(15 23 42 / 35%);
 }
 
 .marcador-sello {
@@ -866,7 +921,7 @@ code {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--oro);
+  background: var(--exito);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -947,83 +1002,17 @@ code {
   gap: 8px;
 }
 
-.buscador-lugar {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio);
-  background: #f8fbff;
-}
 
-.buscador-lugar-titulo {
-  margin: 0 0 4px;
-  font-size: 0.95rem;
-  font-weight: 700;
-}
 
-.buscador-lugar-intro {
-  margin: 0;
-  font-size: 0.83rem;
-  color: var(--tinta-suave);
-}
 
-.buscador-lugar-label {
-  margin-top: 2px;
-}
 
-.buscador-lugar-elegido,
-.buscador-lugar-estado {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--tinta-suave);
-}
 
-.buscador-lugar-elegido strong {
-  color: var(--tinta);
-}
 
-.lista-lugares {
-  display: grid;
-  gap: 8px;
-}
 
-.lugar-sugerencia {
-  display: grid;
-  gap: 2px;
-  width: 100%;
-  padding: 10px 12px;
-  border: 2px solid var(--borde);
-  border-radius: var(--radio-chico);
-  background: var(--superficie);
-  text-align: left;
-  font: inherit;
-  cursor: pointer;
-}
 
-.lugar-sugerencia.es-activo {
-  border-color: var(--primario);
-  background: #eff6ff;
-}
 
-.lugar-sugerencia-nombre {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: var(--tinta);
-}
 
-.lugar-sugerencia-meta {
-  font-size: 0.74rem;
-  color: var(--primario-oscuro);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
 
-.lugar-sugerencia-detalle {
-  font-size: 0.8rem;
-  color: var(--tinta-suave);
-}
 
 .mapa-vacio {
   position: absolute;
@@ -1043,6 +1032,68 @@ code {
 
 .franja-error {
   padding: 8px 12px;
+}
+
+/* ========================================================================
+   Aviso de reportes repetidos
+   ======================================================================== */
+
+.aviso-repetidos {
+  padding: 12px;
+  border: 2px solid var(--aviso);
+  border-radius: var(--radio);
+  background: var(--aviso-claro);
+  color: #78350f;
+}
+
+.aviso-repetidos-titulo {
+  margin: 0 0 4px;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.aviso-repetidos-intro {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+}
+
+.lista-repetidos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lista-repetidos li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: var(--radio-chico);
+  background: var(--superficie);
+}
+
+.repetido-datos {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  color: var(--tinta);
+  overflow-wrap: anywhere;
+}
+
+.repetido-datos span {
+  font-size: 0.78rem;
+  color: var(--tinta-tenue);
+}
+
+.lista-repetidos .boton {
+  flex: none;
+  min-height: 40px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
 }
 
 /* ========================================================================
@@ -1183,6 +1234,16 @@ code {
   white-space: pre-wrap;
 }
 
+.detalle-direccion {
+  margin: 0;
+  padding: 10px 12px;
+  background: #eff6ff;
+  border-radius: var(--radio-chico);
+  font-size: 0.95rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 .etiquetas {
   display: flex;
   flex-wrap: wrap;
@@ -1200,9 +1261,9 @@ code {
   color: var(--tinta-suave);
 }
 
-.etiqueta-estado.es-verificado {
-  background: #fef3c7;
-  color: #78350f;
+.etiqueta-estado.es-confirmado {
+  background: var(--exito-claro);
+  color: var(--exito);
 }
 .etiqueta-estado.es-resuelto {
   background: var(--exito-claro);
@@ -1333,40 +1394,13 @@ code {
    ======================================================================== */
 
 .aviso-privacidad {
-  padding: 14px;
-  border: 2px solid var(--aviso);
-  border-radius: var(--radio);
-  background: var(--aviso-claro);
-  color: #78350f;
-  font-size: 0.88rem;
-}
-
-.aviso-privacidad h3 {
-  margin: 0 0 8px;
-  font-size: 0.98rem;
-}
-
-.aviso-privacidad ul {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.aviso-privacidad li {
-  margin-bottom: 6px;
-}
-
-.aviso-privacidad-legal {
-  margin: 10px 0 0;
-  padding-top: 8px;
-  border-top: 1px solid #fcd34d;
-  font-size: 0.78rem;
-}
-
-.aviso-privacidad.es-compacto {
   margin: 0 14px 12px;
   padding: 10px 12px;
-  font-size: 0.83rem;
-  border-width: 1px;
+  border: 1px solid var(--aviso);
+  border-radius: var(--radio-chico);
+  background: var(--aviso-claro);
+  color: #78350f;
+  font-size: 0.84rem;
 }
 
 /* ========================================================================
@@ -1856,7 +1890,7 @@ code {
 
   .buscador,
   .lista-personas,
-  .aviso-privacidad.es-compacto {
+  .aviso-privacidad {
     max-width: 900px;
     margin-left: auto;
     margin-right: auto;

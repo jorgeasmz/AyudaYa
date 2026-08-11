@@ -3,22 +3,24 @@ import {
   moderarCambiarEstado,
   moderarDescartarDenuncias,
   moderarEliminar,
-  moderarQuitarVerificacion,
-  moderarVerificar,
 } from '../../lib/api.js';
 import { interpretarError } from '../../lib/supabase.js';
 import { fechaCompleta, estadoEfectivo, tiempoRelativo } from '../../lib/formato.js';
-import { tipoDe, TIPOS_PERSONA_POR_VALOR, UMBRAL_ABUSO } from '../../lib/constantes.js';
+import {
+  tipoDe,
+  TIPOS_PERSONA_POR_VALOR,
+  UMBRAL_OCULTAR,
+} from '../../lib/constantes.js';
 import Mensaje from '../../componentes/Mensaje.jsx';
 
 export default function FilaModeracion({ recurso, elemento, alCambiar }) {
   const esMapa = recurso === 'reporte_mapa';
   const [ocupado, establecerOcupado] = useState(false);
   const [error, establecerError] = useState(null);
-  const [pidiendoFuente, establecerPidiendoFuente] = useState(false);
-  const [fuente, establecerFuente] = useState('');
 
-  const oculto = (elemento.reportes_abuso || 0) > UMBRAL_ABUSO;
+  // Misma fórmula que la policy de RLS: denuncias menos confirmaciones.
+  const oculto =
+    (elemento.reportes_abuso || 0) - (elemento.confirmaciones || 0) >= UMBRAL_OCULTAR;
 
   async function ejecutar(operacion, cambios) {
     establecerOcupado(true);
@@ -31,23 +33,6 @@ export default function FilaModeracion({ recurso, elemento, alCambiar }) {
     } finally {
       establecerOcupado(false);
     }
-  }
-
-  async function alVerificar() {
-    const limpia = fuente.trim();
-    if (limpia.length < 3) {
-      establecerError({
-        message: 'Escribe quién verificó la información (mínimo 3 caracteres).',
-      });
-      return;
-    }
-    await ejecutar(() => moderarVerificar(elemento.id, limpia), {
-      verificado: true,
-      fuente_verificacion: limpia,
-      reportes_abuso: 0,
-    });
-    establecerPidiendoFuente(false);
-    establecerFuente('');
   }
 
   async function alEliminar() {
@@ -87,8 +72,10 @@ export default function FilaModeracion({ recurso, elemento, alCambiar }) {
               🚩 {elemento.reportes_abuso}
             </span>
           )}
-          {esMapa && elemento.verificado && (
-            <span className="insignia es-ok">✓ Verificado</span>
+          {esMapa && (elemento.confirmaciones || 0) > 0 && (
+            <span className="insignia es-ok">
+              ✓ {elemento.confirmaciones}
+            </span>
           )}
           <span className="insignia">
             {esMapa ? estadoEfectivo(elemento) : elemento.estado}
@@ -98,7 +85,8 @@ export default function FilaModeracion({ recurso, elemento, alCambiar }) {
 
       {oculto && (
         <p className="fila-moderacion-alerta">
-          Oculto al público por superar {UMBRAL_ABUSO} denuncias.
+          Oculto al público: {elemento.reportes_abuso} denuncias frente a{' '}
+          {elemento.confirmaciones || 0} confirmaciones.
         </p>
       )}
 
@@ -109,13 +97,11 @@ export default function FilaModeracion({ recurso, elemento, alCambiar }) {
           )}
           <p className="fila-moderacion-datos">
             <span>{tipoDe(elemento.tipo).etiqueta}</span>
+            {elemento.direccion && <span>📍 {elemento.direccion}</span>}
             {elemento.contacto && <span>📞 {elemento.contacto}</span>}
             <span>
               📍 {Number(elemento.lat).toFixed(5)}, {Number(elemento.lng).toFixed(5)}
             </span>
-            {elemento.fuente_verificacion && (
-              <span>Fuente: {elemento.fuente_verificacion}</span>
-            )}
           </p>
         </>
       ) : (
@@ -137,71 +123,7 @@ export default function FilaModeracion({ recurso, elemento, alCambiar }) {
         </Mensaje>
       )}
 
-      {pidiendoFuente && (
-        <div className="caja-codigo-entrada">
-          <label className="etiqueta" htmlFor={`fuente-${elemento.id}`}>
-            ¿Quién verificó esta información?
-          </label>
-          <input
-            id={`fuente-${elemento.id}`}
-            className="entrada"
-            type="text"
-            value={fuente}
-            onChange={(e) => establecerFuente(e.target.value)}
-            placeholder="Ej.: Cruz Roja Cali, brigada del barrio"
-            maxLength={80}
-            autoComplete="off"
-          />
-          <div className="caja-codigo-acciones">
-            <button
-              type="button"
-              className="boton boton-plano"
-              onClick={() => {
-                establecerPidiendoFuente(false);
-                establecerFuente('');
-              }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className="boton boton-primario"
-              onClick={alVerificar}
-              disabled={ocupado || fuente.trim().length < 3}
-            >
-              Verificar
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="fila-moderacion-acciones">
-        {esMapa &&
-          (elemento.verificado ? (
-            <button
-              type="button"
-              className="boton boton-secundario"
-              disabled={ocupado}
-              onClick={() =>
-                ejecutar(() => moderarQuitarVerificacion(elemento.id), {
-                  verificado: false,
-                  fuente_verificacion: null,
-                })
-              }
-            >
-              Quitar verificación
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="boton boton-exito"
-              disabled={ocupado}
-              onClick={() => establecerPidiendoFuente(true)}
-            >
-              ✓ Verificar
-            </button>
-          ))}
-
         {esMapa && (
           <>
             <button

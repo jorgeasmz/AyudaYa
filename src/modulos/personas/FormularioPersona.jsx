@@ -24,7 +24,6 @@ export default function FormularioPersona({ tipoRegistro, alCrear, alCerrar }) {
   const [ciudad, establecerCiudad] = useState('');
   const [descripcion, establecerDescripcion] = useState('');
   const [contacto, establecerContacto] = useState('');
-  const [autorizado, establecerAutorizado] = useState(false);
   const [enviando, establecerEnviando] = useState(false);
   const [error, establecerError] = useState(null);
   const [resultado, establecerResultado] = useState(null);
@@ -35,7 +34,6 @@ export default function FormularioPersona({ tipoRegistro, alCrear, alCerrar }) {
     nombreLimpio.length >= 3 &&
     contactoLimpio.length >= 5 &&
     ciudad &&
-    autorizado &&
     !enviando;
 
   async function alEnviar(evento) {
@@ -55,7 +53,7 @@ export default function FormularioPersona({ tipoRegistro, alCrear, alCerrar }) {
       contacto: contactoLimpio,
       ciudad,
       edad: edad === '' ? null : Number(edad),
-      zona: recortar(zona, 80) || null,
+      zona: recortar(zona, 140) || null,
       descripcion: recortar(descripcion, 400) || null,
     };
 
@@ -208,7 +206,7 @@ export default function FormularioPersona({ tipoRegistro, alCrear, alCerrar }) {
 
       <div className="campo">
         <label className="etiqueta" htmlFor="zona">
-          Barrio o zona
+          Dirección o zona
         </label>
         <input
           id="zona"
@@ -216,12 +214,13 @@ export default function FormularioPersona({ tipoRegistro, alCrear, alCerrar }) {
           type="text"
           value={zona}
           onChange={(e) => establecerZona(e.target.value)}
-          placeholder="Ej.: Barrio Obrero, comuna 3"
-          maxLength={80}
+          placeholder="Ej.: Carrera 5 #12-34, o Barrio Obrero"
+          maxLength={140}
           autoComplete="off"
         />
-        <p className="ayuda ayuda-alerta">
-          Solo el barrio o la zona. <strong>Nunca la dirección exacta.</strong>
+        <p className="ayuda">
+          Dirección exacta, punto de referencia o barrio. Lo que ayude a
+          encontrarla.
         </p>
       </div>
 
@@ -265,18 +264,6 @@ export default function FormularioPersona({ tipoRegistro, alCrear, alCerrar }) {
           Será público. Es cómo te contactará quien tenga información.
         </p>
       </div>
-
-      <label className="casilla casilla-destacada">
-        <input
-          type="checkbox"
-          checked={autorizado}
-          onChange={(e) => establecerAutorizado(e.target.checked)}
-        />
-        <span>
-          Entiendo que esta información será pública y autorizo su publicación con el
-          fin de localizar a la persona.
-        </span>
-      </label>
 
       <button
         type="submit"

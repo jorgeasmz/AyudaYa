@@ -22,14 +22,18 @@ import {
   recuperarSesion,
   seleccionar,
 } from './supabase.js';
-import { LIMITE_REPORTES, LIMITE_PERSONAS } from './constantes.js';
+import {
+  LIMITE_REPORTES,
+  LIMITE_PERSONAS,
+  RADIO_DUPLICADOS,
+} from './constantes.js';
 import { prepararBusqueda } from './formato.js';
 
 const MOTIVOS_REINTENTABLES = new Set(['red']);
 
 const COLUMNAS_REPORTE =
-  'id,tipo,titulo,descripcion,lat,lng,ciudad,contacto,estado,verificado,' +
-  'fuente_verificacion,reportes_abuso,created_at,actualizado_en';
+  'id,tipo,titulo,descripcion,lat,lng,ciudad,direccion,contacto,estado,' +
+  'confirmaciones,reportes_abuso,created_at,actualizado_en';
 
 const COLUMNAS_PERSONA =
   'id,tipo_registro,nombre_completo,edad_aprox,zona_barrio,ciudad,descripcion,' +
@@ -106,6 +110,7 @@ export function crearReporte(datos) {
             p_ciudad: datos.ciudad || 'Otra',
             p_descripcion: datos.descripcion || null,
             p_contacto: datos.contacto || null,
+            p_direccion: datos.direccion || null,
           },
           { tope: TOPE_ENVIO_MS }
         ),
@@ -212,6 +217,42 @@ export function eliminarRegistroPersona(id, codigo) {
 //  DENUNCIAS
 // ===========================================================================
 
+/** Confirma que un reporte sigue siendo cierto. Devuelve el total. */
+export function confirmarReporte(id) {
+  return conReintentos(() => llamarRpc('confirmar_reporte', { p_id: id }), {
+    intentos: 2,
+  });
+}
+
+/**
+ * Reportes del mismo tipo cerca de un punto, para avisar de repetidos antes de
+ * publicar. Se resuelve con una caja de coordenadas: sin PostGIS es exacto de
+ * sobra a esta escala y no necesita una función nueva en el servidor.
+ */
+export function buscarReportesCercanos({ tipo, lat, lng, señal }) {
+  const gradosLat = RADIO_DUPLICADOS / 111320;
+  const gradosLng = gradosLat / Math.max(Math.cos((lat * Math.PI) / 180), 0.01);
+
+  return conReintentos(
+    () =>
+      seleccionar('reportes_mapa', {
+        columnas: COLUMNAS_REPORTE,
+        filtros: [
+          ['tipo', 'eq', tipo],
+          ['estado', 'eq', 'activo'],
+          ['lat', 'gte', lat - gradosLat],
+          ['lat', 'lte', lat + gradosLat],
+          ['lng', 'gte', lng - gradosLng],
+          ['lng', 'lte', lng + gradosLng],
+        ],
+        orden: [['actualizado_en', 'desc']],
+        limite: 5,
+        señal,
+      }),
+    { intentos: 1, señal }
+  );
+}
+
 export function denunciar(recurso, id) {
   return conReintentos(
     () => llamarRpc('reportar_abuso', { p_recurso: recurso, p_id: id }),
@@ -265,25 +306,6 @@ function tablaDe(recurso) {
   const tabla = TABLA[recurso];
   if (!tabla) throw new ErrorApp('Recurso desconocido.', 'validacion');
   return tabla;
-}
-
-export function moderarVerificar(id, fuente) {
-  return actualizar('reportes_mapa', id, {
-    verificado: true,
-    fuente_verificacion: fuente,
-    // Verificar reinicia el contador: las denuncias previas quedan resueltas
-    // por decisión del moderador.
-    reportes_abuso: 0,
-    actualizado_en: new Date().toISOString(),
-  });
-}
-
-export function moderarQuitarVerificacion(id) {
-  return actualizar('reportes_mapa', id, {
-    verificado: false,
-    fuente_verificacion: null,
-    actualizado_en: new Date().toISOString(),
-  });
 }
 
 export function moderarCambiarEstado(recurso, id, estado) {

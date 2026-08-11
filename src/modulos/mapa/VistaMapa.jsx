@@ -1,7 +1,6 @@
 import { Suspense, lazy, useCallback, useMemo, useState } from 'react';
 import { useReportes } from './usarReportes.js';
 import { useBorradorReporte } from './usarBorrador.js';
-import BuscadorLugar from './BuscadorLugar.jsx';
 import FiltrosCapas from './FiltrosCapas.jsx';
 import FormularioReporte from './FormularioReporte.jsx';
 import DetalleReporte from './DetalleReporte.jsx';
@@ -34,7 +33,7 @@ export default function VistaMapa() {
 
   // --- Filtros -------------------------------------------------------------
   const [tiposActivos, establecerTiposActivos] = useState(TODOS_LOS_TIPOS);
-  const [soloVerificados, establecerSoloVerificados] = useState(false);
+  const [soloConfirmados, establecerSoloConfirmados] = useState(false);
   const [mostrarCaducados, establecerMostrarCaducados] = useState(false);
 
   // --- Interfaz ------------------------------------------------------------
@@ -46,7 +45,6 @@ export default function VistaMapa() {
   const [errorUbicacion, establecerErrorUbicacion] = useState(null);
   const [vistaSolicitada, establecerVistaSolicitada] = useState(null);
   const [ciudadSugerida, establecerCiudadSugerida] = useState('');
-  const [referenciaUbicacion, establecerReferenciaUbicacion] = useState(null);
 
   // El borrador se guarda fuera del formulario: al ir a señalar la ubicación el
   // formulario se desmonta, y lo escrito no puede perderse.
@@ -70,11 +68,11 @@ export default function VistaMapa() {
     () =>
       reportes.filter((r) => {
         if (!tiposActivos.has(r.tipo)) return false;
-        if (soloVerificados && !r.verificado) return false;
+        if (soloConfirmados && (r.confirmaciones || 0) === 0) return false;
         if (!mostrarCaducados && estadoEfectivo(r, ahora) !== 'activo') return false;
         return true;
       }),
-    [reportes, tiposActivos, soloVerificados, mostrarCaducados, ahora]
+    [reportes, tiposActivos, soloConfirmados, mostrarCaducados, ahora]
   );
 
   const seleccionado = useMemo(
@@ -111,7 +109,6 @@ export default function VistaMapa() {
       (posicion) => {
         const punto = [posicion.coords.latitude, posicion.coords.longitude];
         establecerUbicacion(punto);
-        establecerReferenciaUbicacion('Tu ubicación actual');
         establecerVistaSolicitada({ centro: punto, zoom: 16 });
         establecerBuscandoUbicacion(false);
       },
@@ -136,7 +133,6 @@ export default function VistaMapa() {
     establecerModoUbicacion(true);
     establecerFormularioAbierto(false);
     establecerErrorUbicacion(null);
-    establecerReferenciaUbicacion(null);
   }, []);
 
   const confirmarUbicacion = useCallback(() => {
@@ -152,7 +148,11 @@ export default function VistaMapa() {
     establecerFormularioAbierto(false);
   }, []);
 
-  const { sugerirCiudad, limpiar: limpiarBorrador } = borradorReporte;
+  const {
+    sugerirCiudad,
+    limpiar: limpiarBorrador,
+    cambiar: cambiarBorrador,
+  } = borradorReporte;
 
   const irACiudad = useCallback(
     (nombre) => {
@@ -166,24 +166,49 @@ export default function VistaMapa() {
     [sugerirCiudad]
   );
 
+  /**
+   * Confirmar un reporte que ya existía en vez de publicar uno repetido:
+   * se cierra el formulario, se limpia el borrador y se abre la ficha del
+   * original para que se vea qué acaba de pasar.
+   */
+  const alConfirmarExistente = useCallback(
+    (reporte) => {
+      actualizarLocal(reporte.id, {
+        confirmaciones: (reporte.confirmaciones || 0) + 1,
+        actualizado_en: new Date().toISOString(),
+      });
+      establecerFormularioAbierto(false);
+      establecerUbicacion(null);
+      limpiarBorrador();
+      establecerSeleccionadoId(reporte.id);
+    },
+    [actualizarLocal, limpiarBorrador]
+  );
+
   const alCrearReporte = useCallback(
     (reporte, pendiente) => {
       // Lo pendiente lo pinta la cola (ver `useReportes`); añadirlo también
       // aquí lo duplicaría en el mapa.
       if (!pendiente) agregarLocal(reporte);
       establecerUbicacion(null);
-      establecerReferenciaUbicacion(null);
       limpiarBorrador();
     },
     [agregarLocal, limpiarBorrador]
   );
 
-  const alElegirLugar = useCallback((lugar) => {
-    const punto = [lugar.lat, lugar.lng];
-    establecerUbicacion(punto);
-    establecerReferenciaUbicacion(lugar.nombre);
-    establecerVistaSolicitada({ centro: punto, zoom: 16 });
-  }, []);
+  /**
+   * Elegir una sugerencia del campo de dirección fija las tres cosas a la vez:
+   * el texto que se guarda, el punto del mapa y el encuadre para comprobarlo.
+   */
+  const alElegirDireccion = useCallback(
+    (sugerencia) => {
+      const punto = [sugerencia.lat, sugerencia.lng];
+      establecerUbicacion(punto);
+      establecerVistaSolicitada({ centro: punto, zoom: 17 });
+      cambiarBorrador('direccion', sugerencia.direccion);
+    },
+    [cambiarBorrador]
+  );
 
   const alCambiarUbicacion = useCallback(
     (punto) => {
@@ -191,7 +216,6 @@ export default function VistaMapa() {
       // fuera de ese modo, un toque accidental no debe hacer nada.
       if (modoUbicacion) {
         establecerUbicacion(punto);
-        establecerReferenciaUbicacion(null);
       }
     },
     [modoUbicacion]
@@ -273,8 +297,8 @@ export default function VistaMapa() {
         alAlternar={alternarTipo}
         alAlternarTodos={alternarTodos}
         conteos={conteos}
-        soloVerificados={soloVerificados}
-        alCambiarSoloVerificados={establecerSoloVerificados}
+        soloConfirmados={soloConfirmados}
+        alCambiarSoloConfirmados={establecerSoloConfirmados}
         mostrarCaducados={mostrarCaducados}
         alCambiarMostrarCaducados={establecerMostrarCaducados}
       />
@@ -295,12 +319,8 @@ export default function VistaMapa() {
         {modoUbicacion && (
           <div className="capa-ubicacion">
             <div className="capa-ubicacion-aviso">
-              Busca un lugar público o toca el mapa para ajustar el punto exacto.
+              Toca el mapa o arrastra el pin hasta el punto exacto.
             </div>
-            <BuscadorLugar
-              alElegirLugar={alElegirLugar}
-              referenciaElegida={referenciaUbicacion}
-            />
             <div className="capa-ubicacion-acciones">
               <button
                 type="button"
@@ -308,7 +328,6 @@ export default function VistaMapa() {
                 onClick={() => {
                   establecerModoUbicacion(false);
                   establecerFormularioAbierto(true);
-                  establecerReferenciaUbicacion(null);
                 }}
               >
                 Cancelar
@@ -384,6 +403,8 @@ export default function VistaMapa() {
           alCambiar={borradorReporte.cambiar}
           ubicacion={ubicacion}
           alPedirElegirEnMapa={pedirElegirEnMapa}
+          alElegirDireccion={alElegirDireccion}
+          alConfirmarExistente={alConfirmarExistente}
           alUsarMiUbicacion={usarMiUbicacion}
           buscandoUbicacion={buscandoUbicacion}
           errorUbicacion={errorUbicacion}

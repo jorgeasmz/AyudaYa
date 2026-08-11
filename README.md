@@ -6,9 +6,9 @@ complementa a la Cruz Roja Colombiana, la UNGRD y las alcaldías.
 
 | Módulo | Ruta | Qué hace |
 | --- | --- | --- |
-| Mapa | `/` | Agua, alimento, refugio, atención médica, vías bloqueadas y rescates. Se actualiza en vivo y permite buscar lugares públicos o ubicarte en el mapa |
-| Personas | `/personas` | "Busco a alguien" y "estoy bien". Solo texto, sin mapa y sin direcciones exactas |
-| Moderación | `/admin` | Verificar, ocultar y eliminar contenido |
+| Mapa | `/` | Agua, alimento, refugio, atención médica, vías bloqueadas, rescates y mascotas. Con dirección exacta. Se actualiza en vivo y permite buscar lugares públicos o ubicarte en el mapa |
+| Personas | `/personas` | "Busco a alguien" y "estoy bien". Solo texto, sin mapa |
+| Moderación | `/admin` | Cambiar estado y eliminar contenido. No verifica nada |
 
 React + Vite + Leaflet contra Supabase. Sin servidor propio: la lógica de
 negocio vive en PostgreSQL.
@@ -16,6 +16,14 @@ negocio vive en PostgreSQL.
 ---
 
 ## Puesta en marcha
+
+Variables de entorno (`.env` en local, panel del proveedor en producción):
+
+| Variable | Obligatoria | Para qué |
+| --- | --- | --- |
+| `VITE_SUPABASE_URL` | Sí | URL del proyecto de Supabase |
+| `VITE_SUPABASE_ANON_KEY` | Sí | Clave pública. Es pública por diseño: protege la RLS, no el secreto |
+| `VITE_URL_GEOCODIFICACION` | No | Servidor de autocompletado de direcciones. Vacío usa Nominatim |
 
 La base de datos se crea ejecutando [`supabase/schema.sql`](supabase/schema.sql)
 entero en el SQL Editor de Supabase. Es idempotente: se puede reejecutar.
@@ -34,7 +42,7 @@ caliente: cambiarlas en producción exige volver a desplegar.
 
 ## Antes de tocar el código
 
-Seis cosas que no se deducen leyendo los archivos y que causan bugs si se
+Diez cosas que no se deducen leyendo los archivos y que causan bugs si se
 ignoran.
 
 **1. El navegador no puede escribir en las tablas.** `anon` solo tiene `SELECT`.
@@ -69,6 +77,43 @@ desactivado, y `public.es_admin()` comprueba además que esté en
 
 **6. Con RLS, un `UPDATE` sin permiso no lanza error: afecta a 0 filas.**
 Tenlo en cuenta al escribir pruebas o al depurar moderación.
+
+**7. Se admiten direcciones exactas, a propósito.** Es una decisión de producto:
+en una emergencia, "Carrera 5 #12-34" vale más que "barrio Obrero". El texto se
+sanea y se recorta a 140 caracteres, pero no se restringe su contenido. Lo único
+que la interfaz conserva es una línea diciendo que lo publicado es visible para
+cualquiera.
+
+**8. No hay verificación por una autoridad, y es deliberado.** Nadie va a
+revisar cientos de reportes en una emergencia, y ningún organismo va a validar
+una herramienta informal. En su lugar hay tres mecanismos que funcionan solos:
+
+- **Confirmaciones.** Cualquiera puede pulsar "sigue aquí". Una por IP y
+  reporte. Sube el contador que se ve, compensa denuncias y refresca
+  `actualizado_en`, así que un reporte confirmado no caduca a las 48 h y uno que
+  nadie confirma se apaga solo.
+- **Visibilidad por saldo.** Un reporte desaparece cuando las denuncias le sacan
+  3 a las confirmaciones. Es un saldo, no un contador suelto: una persona
+  malintencionada no tumba lo que otras diez confirmaron, y un reporte falso sin
+  apoyo se cae con tres avisos. La fórmula vive en las policies
+  `lectura_publica_*` y en `UMBRAL_OCULTAR`; deben coincidir.
+- **Detección de repetidos.** Al fijar la ubicación se buscan reportes del mismo
+  tipo a menos de 150 m y se ofrece confirmar el existente en lugar de publicar
+  otro. Convierte un duplicado en una señal que refuerza el original. Avisa,
+  nunca bloquea: puede haber dos puntos de agua en la misma manzana.
+
+**9. El autocompletado de direcciones usa Nominatim, que limita a una petición
+por segundo.** Por eso hay rebote de 600 ms en el campo e intervalo mínimo entre
+llamadas en [`src/lib/geocodificacion.js`](src/lib/geocodificacion.js). Su
+política exige identificar la aplicación, así que `Referrer-Policy` es
+`strict-origin-when-cross-origin` y no `no-referrer`: envía el origen, no la
+ruta. Con tráfico real, cambia de proveedor con `VITE_URL_GEOCODIFICACION`.
+
+**10. No añadas sobrecargas a las RPC de creación.** Hubo una que omitía `p_tipo`
+y lo rellenaba con `'otro'`: quitaba un PGRST202 y, a cambio, la app guardó
+todos los reportes como "Otro" sin que nadie se enterara. Si PostgREST no
+encuentra la función, el cliente manda mal los parámetros. `diagnostico.sql`
+comprueba que solo exista una firma por función.
 
 ---
 
@@ -131,11 +176,15 @@ Ningún componente hace peticiones directamente: todo pasa por `lib/api.js`.
 | Qué | Dónde |
 | --- | --- |
 | Añadir una ciudad | `CIUDADES` en `constantes.js`. No hay que tocar SQL |
-| Añadir un tipo de reporte | `TIPOS_REPORTE` en `constantes.js` y `alter type tipo_reporte add value` |
-| Umbral de ocultado automático | Tres sitios que deben coincidir: las dos policies `lectura_publica_*` y `UMBRAL_ABUSO` |
+| Añadir un tipo de reporte | `TIPOS_REPORTE` en `constantes.js` y `alter type tipo_reporte add value` (ver `mascotas` como ejemplo) |
+| Comprobar la instalación | `supabase/diagnostico.sql` en el SQL Editor: ocho comprobaciones, todas deben dar `t` |
+| Revisar el código antes de desplegar | `npm run lint`. Vite compila aunque una variable no exista; ESLint no |
+| Umbral de ocultado automático | Tres sitios que deben coincidir: las dos policies `lectura_publica_*` y `UMBRAL_OCULTAR` |
 | Límite de envíos por IP | Argumentos de `privado.exigir_limite()` en el esquema |
 | Caducidad de 48 h | `HORAS_CADUCIDAD` en `constantes.js` y el `interval` de `marcar_caducados()` |
 | Purga automática de datos | Activar `pg_cron` y ejecutar la sección 9 del esquema |
+| Radio de detección de repetidos | `RADIO_DUPLICADOS` en `constantes.js` |
+| Cuántas confirmaciones destacan un reporte | `CONFIRMACIONES_DESTACADO` en `constantes.js` |
 | Búsqueda de lugares públicos | Buscador de ubicación en `modulos/mapa/Mapa.jsx` y CSP de Vercel para Nominatim |
 | Añadir un moderador | Crear el usuario en Supabase Auth e insertarlo en `privado.administradores` |
 | Cambiar el proveedor de mapas | URL de teselas en `modulos/mapa/Mapa.jsx` y `img-src` en `vercel.json` y `netlify.toml` |

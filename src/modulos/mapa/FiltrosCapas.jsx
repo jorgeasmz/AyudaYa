@@ -9,8 +9,8 @@ export default function FiltrosCapas({
   alAlternar,
   alAlternarTodos,
   conteos,
-  soloVerificados,
-  alCambiarSoloVerificados,
+  soloConfirmados,
+  alCambiarSoloConfirmados,
   mostrarCaducados,
   alCambiarMostrarCaducados,
 }) {
@@ -53,10 +53,10 @@ export default function FiltrosCapas({
         <label className="casilla">
           <input
             type="checkbox"
-            checked={soloVerificados}
-            onChange={(e) => alCambiarSoloVerificados(e.target.checked)}
+            checked={soloConfirmados}
+            onChange={(e) => alCambiarSoloConfirmados(e.target.checked)}
           />
-          <span>Solo verificados</span>
+          <span>Solo confirmados</span>
         </label>
         <label className="casilla">
           <input
