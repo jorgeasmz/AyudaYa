@@ -25,6 +25,12 @@ npm run dev               # http://localhost:5173
 
 La base de datos se crea ejecutando [`supabase/schema.sql`](supabase/schema.sql)
 entero en el SQL Editor de Supabase. Es idempotente: se puede reejecutar.
+Después, [`supabase/diagnostico.sql`](supabase/diagnostico.sql) confirma en ocho
+comprobaciones que los permisos y la RLS quedaron como deben.
+
+Al crear el proyecto, Supabase pregunta por la Data API. Los ajustes correctos
+son: **Data API activada**, **exposición automática de tablas desactivada** (el
+esquema concede permisos de forma explícita) y **RLS automática activada**.
 
 Si sale la pantalla "Falta configurar la aplicación", revisa el `.env` y
 reinicia. Las variables `VITE_*` se incrustan **al compilar**, no se leen en
