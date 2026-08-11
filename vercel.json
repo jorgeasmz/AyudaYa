@@ -6,7 +6,7 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/((?!assets/|icono.svg|manifest.webmanifest|sw.js|robots.txt).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
