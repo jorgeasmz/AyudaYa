@@ -41,7 +41,9 @@ select * from (values
   ('hay políticas creadas',                  (select policies        from c) >= 6),
   ('NO existe política de INSERT',            (select policies_insert from c) = 0),
   ('reportes_mapa está en Realtime',        (select en_realtime     from c) = 1),
-  ('hay compatibilidad RPC de creación',    (select firmas_creacion from c) = 3),
+  -- Exactamente una firma por función. Una sobrecarga extra deja que un
+  -- cliente con parámetros incompletos escriba datos incorrectos en silencio.
+  ('una sola firma por función de creación', (select firmas_creacion from c) = 2),
   ('anon NO ve el esquema privado',         (select anon_ve_privado from c) = false)
 ) as t(comprobacion, correcto)
 order by correcto, comprobacion;

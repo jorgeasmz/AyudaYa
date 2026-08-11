@@ -52,6 +52,7 @@ export default function FormularioReporte({
     const envio = {
       id: generarId(),
       codigo: generarCodigo(),
+      tipo,
       titulo: tituloLimpio,
       descripcion: recortar(descripcion, 400) || null,
       lat: ubicacion[0],
@@ -76,6 +77,7 @@ export default function FormularioReporte({
       fuente_verificacion: null,
       reportes_abuso: 0,
       created_at: new Date().toISOString(),
+      actualizado_en: new Date().toISOString(),
     };
 
     // Si el navegador ya sabe que no hay red, no se gasta ni un segundo

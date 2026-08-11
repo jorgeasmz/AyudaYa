@@ -627,42 +627,16 @@ end $$;
 
 
 -- -----------------------------------------------------------------------------
---  6.2.b Compatibilidad con una firma anterior
+--  6.2.b Sin sobrecargas
 --
---  Algunas instalaciones o clientes viejos todavía llaman la RPC sin `p_tipo`.
---  Esta sobrecarga conserva el comportamiento y evita el 404 de schema cache.
---  Si el cliente no manda tipo, lo tratamos como `otro`.
+--  NO añadas una segunda firma de esta funcion para "arreglar" un PGRST202.
+--  Hubo una que omitia `p_tipo` y lo rellenaba con 'otro': el 404 desaparecia,
+--  pero la app guardaba TODOS los reportes como "Otro" sin avisar a nadie.
+--  Si PostgREST no encuentra la funcion, el cliente esta mandando mal los
+--  parametros: hay que arreglar el cliente, no ablandar el servidor.
+--
+--  `diagnostico.sql` comprueba que solo exista una firma por funcion.
 -- -----------------------------------------------------------------------------
-
-create or replace function public.crear_reporte_mapa(
-  p_id          uuid,
-  p_codigo      text,
-  p_titulo      text,
-  p_lat         float8,
-  p_lng         float8,
-  p_ciudad      text default 'Otra',
-  p_descripcion text default null,
-  p_contacto    text default null
-)
-returns uuid
-language plpgsql
-security definer
-set search_path = public, privado, pg_temp
-as $$
-begin
-  return public.crear_reporte_mapa(
-    p_id,
-    p_codigo,
-    'otro',
-    p_titulo,
-    p_lat,
-    p_lng,
-    p_ciudad,
-    p_descripcion,
-    p_contacto
-  );
-end $$;
-
 
 -- -----------------------------------------------------------------------------
 --  6.3 Quien creó un reporte lo marca como resuelto (o reactiva)

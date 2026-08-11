@@ -234,7 +234,9 @@ async function peticionAuth(ruta, cuerpo, { metodo = 'POST', token } = {}) {
   try {
     respuesta = await fetch(`${BASE_AUTH}/${ruta}`, {
       method: metodo,
-      signal,
+      // `signal: señal`, nunca la abreviatura `signal`: el nombre en español no
+      // coincide con el de la opción y la referencia quedaría sin definir.
+      signal: señal,
       headers: {
         apikey: CLAVE_SUPABASE,
         'Content-Type': 'application/json',
