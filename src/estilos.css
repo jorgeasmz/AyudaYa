@@ -811,6 +811,25 @@ code {
   font-size: 1.3rem;
 }
 
+.boton-control-ubicacion {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: #fff;
+  color: var(--primario);
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 40px;
+  cursor: pointer;
+  display: block;
+}
+
+.boton-control-ubicacion.es-buscando {
+  background: #eff6ff;
+  color: var(--primario-oscuro);
+  animation: pulso 1.2s ease-in-out infinite;
+}
+
 .marcador-envoltorio {
   background: none;
   border: 0;
@@ -885,6 +904,20 @@ code {
   filter: drop-shadow(0 2px 3px rgb(15 23 42 / 45%));
 }
 
+.marcador-ubicacion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  box-shadow: 0 0 0 4px rgb(29 78 216 / 18%);
+}
+
 .capa-ubicacion {
   position: absolute;
   inset: auto 0 0;
@@ -894,6 +927,11 @@ code {
   background: var(--superficie);
   border-top: 2px solid var(--primario);
   box-shadow: var(--sombra-alta);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: min(58dvh, 460px);
+  overflow-y: auto;
 }
 
 .capa-ubicacion-aviso {
@@ -907,6 +945,84 @@ code {
   display: grid;
   grid-template-columns: 1fr 2fr;
   gap: 8px;
+}
+
+.buscador-lugar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: #f8fbff;
+}
+
+.buscador-lugar-titulo {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.buscador-lugar-intro {
+  margin: 0;
+  font-size: 0.83rem;
+  color: var(--tinta-suave);
+}
+
+.buscador-lugar-label {
+  margin-top: 2px;
+}
+
+.buscador-lugar-elegido,
+.buscador-lugar-estado {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--tinta-suave);
+}
+
+.buscador-lugar-elegido strong {
+  color: var(--tinta);
+}
+
+.lista-lugares {
+  display: grid;
+  gap: 8px;
+}
+
+.lugar-sugerencia {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--borde);
+  border-radius: var(--radio-chico);
+  background: var(--superficie);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.lugar-sugerencia.es-activo {
+  border-color: var(--primario);
+  background: #eff6ff;
+}
+
+.lugar-sugerencia-nombre {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--tinta);
+}
+
+.lugar-sugerencia-meta {
+  font-size: 0.74rem;
+  color: var(--primario-oscuro);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.lugar-sugerencia-detalle {
+  font-size: 0.8rem;
+  color: var(--tinta-suave);
 }
 
 .mapa-vacio {

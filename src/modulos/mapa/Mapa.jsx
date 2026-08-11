@@ -9,7 +9,7 @@
  * que la vista del mapa está en pantalla.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { tipoDe, VISTA_INICIAL } from '../../lib/constantes.js';
@@ -59,7 +59,11 @@ export default function Mapa({
   const refContenedor = useRef(null);
   const refMapa = useRef(null);
   const refMarcadores = useRef(new Map());
+  const refMarcadorUbicacion = useRef(null);
+  const refCirculoUbicacion = useRef(null);
+  const refBotonUbicacion = useRef(null);
   const refCallbacks = useRef({ alSeleccionar, alElegirUbicacion });
+  const [buscandoUbicacion, establecerBuscandoUbicacion] = useState(false);
 
   // Los callbacks se leen desde una ref para no tener que volver a registrar
   // los manejadores de Leaflet en cada render.
@@ -93,10 +97,92 @@ export default function Mapa({
         '&copy; colaboradores de <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
     }).addTo(mapa);
 
+    const iconoUbicacion = L.divIcon({
+      className: 'marcador-envoltorio',
+      html: '<span class="marcador-ubicacion">●</span>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
+    });
+
+    const ajustarBotonUbicacion = (activo) => {
+      if (refBotonUbicacion.current) {
+        refBotonUbicacion.current.classList.toggle('es-buscando', activo);
+        refBotonUbicacion.current.setAttribute('aria-busy', activo ? 'true' : 'false');
+        refBotonUbicacion.current.disabled = activo;
+      }
+    };
+
+    const actualizarUbicacion = (latlng, precision) => {
+      if (!refMarcadorUbicacion.current) {
+        refMarcadorUbicacion.current = L.marker(latlng, { icon: iconoUbicacion }).addTo(mapa);
+      } else {
+        refMarcadorUbicacion.current.setLatLng(latlng);
+      }
+
+      if (!refCirculoUbicacion.current) {
+        refCirculoUbicacion.current = L.circle(latlng, {
+          radius: precision,
+          color: '#1d4ed8',
+          weight: 2,
+          fillColor: '#3b82f6',
+          fillOpacity: 0.12,
+        }).addTo(mapa);
+      } else {
+        refCirculoUbicacion.current.setLatLng(latlng);
+        refCirculoUbicacion.current.setRadius(precision);
+      }
+    };
+
+    const controlUbicacion = L.control({ position: 'topleft' });
+    controlUbicacion.onAdd = () => {
+      const contenedor = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+      const boton = L.DomUtil.create('button', 'boton-control-ubicacion', contenedor);
+      boton.type = 'button';
+      boton.setAttribute('aria-label', 'Buscar mi ubicación');
+      boton.setAttribute('title', 'Buscar mi ubicación');
+      boton.innerHTML = '⌖';
+      refBotonUbicacion.current = boton;
+
+      L.DomEvent.disableClickPropagation(contenedor);
+      L.DomEvent.disableScrollPropagation(contenedor);
+
+      L.DomEvent.on(boton, 'click', () => {
+        if (!navigator.geolocation) {
+          window.alert('Tu navegador no permite ubicarte.');
+          return;
+        }
+
+        ajustarBotonUbicacion(true);
+        mapa.locate({
+          setView: true,
+          maxZoom: 16,
+          enableHighAccuracy: true,
+          timeout: 12000,
+          watch: false,
+        });
+      });
+
+      return contenedor;
+    };
+
+    mapa.on('locationfound', (evento) => {
+      ajustarBotonUbicacion(false);
+      const latlng = evento.latlng;
+      actualizarUbicacion(latlng, Math.max(evento.accuracy || 0, 20));
+      mapa.setView(latlng, Math.max(mapa.getZoom(), 16));
+    });
+
+    mapa.on('locationerror', (evento) => {
+      ajustarBotonUbicacion(false);
+      window.alert(evento.message || 'No pudimos encontrar tu ubicación.');
+    });
+
     // Reparto de esquinas para que nada se pise en una pantalla de teléfono:
-    //   arriba-derecha  -> zoom (el pulgar llega, y no tapa el mapa)
-    //   abajo-izquierda -> atribución de OpenStreetMap (obligatoria por licencia)
-    //   abajo-derecha   -> botón flotante de "Reportar" (fuera de este archivo)
+    //   arriba-izquierda -> mi ubicación (búsqueda geográfica)
+    //   arriba-derecha   -> zoom (el pulgar llega, y no tapa el mapa)
+    //   abajo-izquierda  -> atribución de OpenStreetMap (obligatoria por licencia)
+    //   abajo-derecha    -> botón flotante de "Reportar" (fuera de este archivo)
+    controlUbicacion.addTo(mapa);
     L.control.zoom({ position: 'topright' }).addTo(mapa);
     L.control.attribution({ position: 'bottomleft', prefix: false }).addTo(mapa);
 
@@ -111,11 +197,24 @@ export default function Mapa({
 
     return () => {
       clearTimeout(t);
+      refMarcadorUbicacion.current?.remove();
+      refCirculoUbicacion.current?.remove();
       mapa.remove();
       refMapa.current = null;
       refMarcadores.current.clear();
     };
   }, []);
+
+  useEffect(() => {
+    if (refBotonUbicacion.current) {
+      refBotonUbicacion.current.classList.toggle('es-buscando', buscandoUbicacion);
+      refBotonUbicacion.current.setAttribute(
+        'aria-busy',
+        buscandoUbicacion ? 'true' : 'false'
+      );
+      refBotonUbicacion.current.disabled = buscandoUbicacion;
+    }
+  }, [buscandoUbicacion]);
 
   // --- Sincronizar marcadores con la lista de reportes ---------------------
   const firma = useMemo(

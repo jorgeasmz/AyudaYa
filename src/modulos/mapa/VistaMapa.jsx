@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useMemo, useState } from 'react';
 import { useReportes } from './usarReportes.js';
 import { useBorradorReporte } from './usarBorrador.js';
+import BuscadorLugar from './BuscadorLugar.jsx';
 import FiltrosCapas from './FiltrosCapas.jsx';
 import FormularioReporte from './FormularioReporte.jsx';
 import DetalleReporte from './DetalleReporte.jsx';
@@ -45,6 +46,7 @@ export default function VistaMapa() {
   const [errorUbicacion, establecerErrorUbicacion] = useState(null);
   const [vistaSolicitada, establecerVistaSolicitada] = useState(null);
   const [ciudadSugerida, establecerCiudadSugerida] = useState('');
+  const [referenciaUbicacion, establecerReferenciaUbicacion] = useState(null);
 
   // El borrador se guarda fuera del formulario: al ir a señalar la ubicación el
   // formulario se desmonta, y lo escrito no puede perderse.
@@ -109,6 +111,7 @@ export default function VistaMapa() {
       (posicion) => {
         const punto = [posicion.coords.latitude, posicion.coords.longitude];
         establecerUbicacion(punto);
+        establecerReferenciaUbicacion('Tu ubicación actual');
         establecerVistaSolicitada({ centro: punto, zoom: 16 });
         establecerBuscandoUbicacion(false);
       },
@@ -133,6 +136,7 @@ export default function VistaMapa() {
     establecerModoUbicacion(true);
     establecerFormularioAbierto(false);
     establecerErrorUbicacion(null);
+    establecerReferenciaUbicacion(null);
   }, []);
 
   const confirmarUbicacion = useCallback(() => {
@@ -168,16 +172,27 @@ export default function VistaMapa() {
       // aquí lo duplicaría en el mapa.
       if (!pendiente) agregarLocal(reporte);
       establecerUbicacion(null);
+      establecerReferenciaUbicacion(null);
       limpiarBorrador();
     },
     [agregarLocal, limpiarBorrador]
   );
 
+  const alElegirLugar = useCallback((lugar) => {
+    const punto = [lugar.lat, lugar.lng];
+    establecerUbicacion(punto);
+    establecerReferenciaUbicacion(lugar.nombre);
+    establecerVistaSolicitada({ centro: punto, zoom: 16 });
+  }, []);
+
   const alCambiarUbicacion = useCallback(
     (punto) => {
       // Tocar el mapa solo mueve el pin cuando se está eligiendo ubicación:
       // fuera de ese modo, un toque accidental no debe hacer nada.
-      if (modoUbicacion) establecerUbicacion(punto);
+      if (modoUbicacion) {
+        establecerUbicacion(punto);
+        establecerReferenciaUbicacion(null);
+      }
     },
     [modoUbicacion]
   );
@@ -280,8 +295,12 @@ export default function VistaMapa() {
         {modoUbicacion && (
           <div className="capa-ubicacion">
             <div className="capa-ubicacion-aviso">
-              Toca el mapa o arrastra el pin hasta el punto exacto.
+              Busca un lugar público o toca el mapa para ajustar el punto exacto.
             </div>
+            <BuscadorLugar
+              alElegirLugar={alElegirLugar}
+              referenciaElegida={referenciaUbicacion}
+            />
             <div className="capa-ubicacion-acciones">
               <button
                 type="button"
@@ -289,6 +308,7 @@ export default function VistaMapa() {
                 onClick={() => {
                   establecerModoUbicacion(false);
                   establecerFormularioAbierto(true);
+                  establecerReferenciaUbicacion(null);
                 }}
               >
                 Cancelar
