@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /$
+Allow: /personas
+
+# El panel de moderación no debe indexarse.
+Disallow: /admin

@@ -1,0 +1,2 @@
+# Netlify: SPA fallback. Cualquier ruta la resuelve el enrutador del cliente.
+/*  /index.html  200

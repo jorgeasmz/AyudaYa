@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="AyudaYa">
+  <rect width="64" height="64" rx="14" fill="#0f172a"/>
+  <path d="M6 40 L16 40 L21 26 L28 50 L36 18 L43 40 L58 40"
+        fill="none" stroke="#f8fafc" stroke-width="4"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="48" cy="18" r="7" fill="#dc2626"/>
+</svg>

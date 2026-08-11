@@ -1,0 +1,23 @@
+node_modules/
+dist/
+dist-ssr/
+.vite/
+
+# Variables de entorno reales - nunca al repositorio
+.env
+.env.local
+.env.*.local
+
+# Editores / sistema
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Plataformas de despliegue
+.vercel
+.netlify

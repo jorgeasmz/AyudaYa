@@ -1,0 +1,25 @@
+{
+  "name": "AyudaYa",
+  "short_name": "AyudaYa",
+  "description": "AyudaYa: mapa comunitario de necesidades y buscador de personas tras el sismo del Chocó. Herramienta no oficial.",
+  "lang": "es-CO",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/icono.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Mapa de necesidades", "url": "/" },
+    { "name": "Buscar personas", "url": "/personas" }
+  ]
+}
