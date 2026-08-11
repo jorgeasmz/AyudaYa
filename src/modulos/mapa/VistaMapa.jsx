@@ -140,6 +140,14 @@ export default function VistaMapa() {
     establecerFormularioAbierto(true);
   }, []);
 
+  const cerrarDetalle = useCallback(() => {
+    establecerSeleccionadoId(null);
+  }, []);
+
+  const cerrarFormulario = useCallback(() => {
+    establecerFormularioAbierto(false);
+  }, []);
+
   const { sugerirCiudad, limpiar: limpiarBorrador } = borradorReporte;
 
   const irACiudad = useCallback(
@@ -334,13 +342,13 @@ export default function VistaMapa() {
       <Hoja
         abierta={Boolean(seleccionado)}
         titulo="Detalle del reporte"
-        alCerrar={() => establecerSeleccionadoId(null)}
+        alCerrar={cerrarDetalle}
       >
         {seleccionado && (
           <DetalleReporte
             reporte={seleccionado}
             alActualizar={actualizarLocal}
-            alCerrar={() => establecerSeleccionadoId(null)}
+            alCerrar={cerrarDetalle}
           />
         )}
       </Hoja>
@@ -349,7 +357,7 @@ export default function VistaMapa() {
         abierta={formularioAbierto}
         titulo="Publicar un reporte"
         alto="alta"
-        alCerrar={() => establecerFormularioAbierto(false)}
+        alCerrar={cerrarFormulario}
       >
         <FormularioReporte
           borrador={borradorReporte.borrador}
@@ -360,7 +368,7 @@ export default function VistaMapa() {
           buscandoUbicacion={buscandoUbicacion}
           errorUbicacion={errorUbicacion}
           alCrear={alCrearReporte}
-          alCerrar={() => establecerFormularioAbierto(false)}
+          alCerrar={cerrarFormulario}
         />
       </Hoja>
     </div>

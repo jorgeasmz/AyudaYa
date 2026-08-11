@@ -71,12 +71,14 @@ export function tipoDe(valor) {
 
 /** Ciudades del selector. `centro` sirve para encuadrar el mapa. */
 export const CIUDADES = [
-  { nombre: 'Cali', centro: [3.4516, -76.532], zoom: 12 },
-  { nombre: 'Manizales', centro: [5.0703, -75.5138], zoom: 13 },
-  { nombre: 'Pereira', centro: [4.8133, -75.6961], zoom: 13 },
-  { nombre: 'Quibdó', centro: [5.6947, -76.6611], zoom: 13 },
   { nombre: 'San José del Palmar', centro: [4.8967, -76.2264], zoom: 13 },
-  { nombre: 'Bogotá', centro: [4.711, -74.0721], zoom: 11 },
+  { nombre: 'Cali', centro: [3.4516, -76.532], zoom: 12 },
+  { nombre: 'Zarzal', centro: [4.3947, -76.0707], zoom: 13 },
+  { nombre: 'Cartago', centro: [4.7463, -75.9117], zoom: 13 },
+  { nombre: 'Pereira', centro: [4.8133, -75.6961], zoom: 13 },
+  { nombre: 'Manizales', centro: [5.0703, -75.5138], zoom: 13 },
+  { nombre: 'Armenia', centro: [4.5339, -75.6811], zoom: 13 },
+  { nombre: 'Popayán', centro: [2.4448, -76.6147], zoom: 12 },
   { nombre: 'Otra', centro: null, zoom: null },
 ];
 
