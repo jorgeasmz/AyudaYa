@@ -6,7 +6,7 @@ complementa a la Cruz Roja Colombiana, la UNGRD y las alcaldías.
 
 | Módulo | Ruta | Qué hace |
 | --- | --- | --- |
-| Mapa | `/` | Agua, alimento, refugio, atención médica, vías bloqueadas y rescates. Se actualiza en vivo |
+| Mapa | `/` | Agua, alimento, refugio, atención médica, vías bloqueadas y rescates. Se actualiza en vivo y permite buscar lugares públicos o ubicarte en el mapa |
 | Personas | `/personas` | "Busco a alguien" y "estoy bien". Solo texto, sin mapa y sin direcciones exactas |
 | Moderación | `/admin` | Verificar, ocultar y eliminar contenido |
 
@@ -16,12 +16,6 @@ negocio vive en PostgreSQL.
 ---
 
 ## Puesta en marcha
-
-```bash
-cp .env.example .env      # URL y clave pública de tu proyecto Supabase
-npm install
-npm run dev               # http://localhost:5173
-```
 
 La base de datos se crea ejecutando [`supabase/schema.sql`](supabase/schema.sql)
 entero en el SQL Editor de Supabase. Es idempotente: se puede reejecutar.
@@ -122,7 +116,7 @@ src/
     almacenamiento.js      localStorage a prueba de fallos
     enrutador.js           Enrutador de 40 líneas
   componentes/             Banner, hoja deslizante, avisos, esqueletos
-  modulos/mapa/            Leaflet, filtros, formulario, ficha, borrador
+  modulos/mapa/            Leaflet, filtros, formulario, ficha, borrador, búsqueda de lugares y ubicación
   modulos/personas/        Buscador, tarjetas, formulario
   modulos/admin/           Panel de moderación
 public/sw.js               Service worker mínimo, sin Workbox
@@ -142,6 +136,7 @@ Ningún componente hace peticiones directamente: todo pasa por `lib/api.js`.
 | Límite de envíos por IP | Argumentos de `privado.exigir_limite()` en el esquema |
 | Caducidad de 48 h | `HORAS_CADUCIDAD` en `constantes.js` y el `interval` de `marcar_caducados()` |
 | Purga automática de datos | Activar `pg_cron` y ejecutar la sección 9 del esquema |
+| Búsqueda de lugares públicos | Buscador de ubicación en `modulos/mapa/Mapa.jsx` y CSP de Vercel para Nominatim |
 | Añadir un moderador | Crear el usuario en Supabase Auth e insertarlo en `privado.administradores` |
 | Cambiar el proveedor de mapas | URL de teselas en `modulos/mapa/Mapa.jsx` y `img-src` en `vercel.json` y `netlify.toml` |
 
