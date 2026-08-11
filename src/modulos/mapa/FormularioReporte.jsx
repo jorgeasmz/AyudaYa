@@ -52,7 +52,6 @@ export default function FormularioReporte({
     const envio = {
       id: generarId(),
       codigo: generarCodigo(),
-      tipo,
       titulo: tituloLimpio,
       descripcion: recortar(descripcion, 400) || null,
       lat: ubicacion[0],
@@ -77,7 +76,6 @@ export default function FormularioReporte({
       fuente_verificacion: null,
       reportes_abuso: 0,
       created_at: new Date().toISOString(),
-      actualizado_en: new Date().toISOString(),
     };
 
     // Si el navegador ya sabe que no hay red, no se gasta ni un segundo
@@ -131,8 +129,8 @@ export default function FormularioReporte({
           </>
         ) : (
           <>
-            <h3>Reporte publicado</h3>
-            <p>Ya aparece en el mapa para todo el mundo.</p>
+            <h3>Publicado en el mapa</h3>
+            <p>Ya aparece en el mapa para que otros vean la necesidad o el recurso.</p>
           </>
         )}
 
@@ -161,7 +159,7 @@ export default function FormularioReporte({
 
       <fieldset className="campo">
         <legend className="etiqueta">
-          ¿Qué estás reportando? <span className="obligatorio">*</span>
+          ¿Qué necesitas o estás reportando? <span className="obligatorio">*</span>
         </legend>
         <div className="rejilla-tipos">
           {TIPOS_REPORTE.map((t) => (
@@ -195,7 +193,7 @@ export default function FormularioReporte({
           type="text"
           value={titulo}
           onChange={(e) => alCambiar('titulo', e.target.value)}
-          placeholder="Ej.: Carrotanque de agua en el parque"
+          placeholder="Ej.: Se necesitan pañales en el colegio"
           maxLength={90}
           autoComplete="off"
           enterKeyHint="next"
@@ -213,7 +211,7 @@ export default function FormularioReporte({
           className="entrada entrada-area"
           value={descripcion}
           onChange={(e) => alCambiar('descripcion', e.target.value)}
-          placeholder="Horario, cuánta gente puede atender, qué hace falta…"
+          placeholder="Qué hace falta, cuántas personas lo necesitan, cuándo y dónde…"
           maxLength={400}
           rows={3}
         />
