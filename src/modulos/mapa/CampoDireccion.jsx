@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { buscarDirecciones } from '../../lib/geocodificacion.js';
+import { CIUDADES } from '../../lib/constantes.js';
 
 /**
  * Campo de dirección con sugerencias, al estilo de un buscador de mapas.
@@ -53,6 +54,7 @@ export default function CampoDireccion({
       try {
         const encontrados = await buscarDirecciones(termino, {
           ciudad,
+          centro: CIUDADES.find((c) => c.nombre === ciudad)?.centro,
           señal: controlador.signal,
         });
         if (controlador.signal.aborted) return;

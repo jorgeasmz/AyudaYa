@@ -77,22 +77,40 @@ export function tipoDe(valor) {
 }
 
 /** Ciudades del selector. `centro` sirve para encuadrar el mapa. */
+/**
+ * Municipios afectados por el sismo. Coordenadas del casco urbano,
+ * comprobadas contra OpenStreetMap: el centroide del límite municipal cae
+ * en el campo en los municipios grandes y rurales.
+ *
+ * Van de norte a sur por zona (Chocó, Eje Cafetero, Valle, Cauca) para que
+ * la lista se recorra igual que el mapa. `Otra` cubre cualquier otro sitio,
+ * incluido dónde esté quien busca desde fuera de la región.
+ */
 export const CIUDADES = [
-  { nombre: 'San José del Palmar', centro: [4.8967, -76.2264], zoom: 13 },
-  { nombre: 'Cali', centro: [3.4516, -76.532], zoom: 12 },
-  { nombre: 'Zarzal', centro: [4.3947, -76.0707], zoom: 13 },
-  { nombre: 'Cartago', centro: [4.7463, -75.9117], zoom: 13 },
-  { nombre: 'Pereira', centro: [4.8133, -75.6961], zoom: 13 },
-  { nombre: 'Manizales', centro: [5.0703, -75.5138], zoom: 13 },
-  { nombre: 'Armenia', centro: [4.5339, -75.6811], zoom: 13 },
-  { nombre: 'Popayán', centro: [2.4448, -76.6147], zoom: 12 },
+  { nombre: 'Quibdó', centro: [5.6913, -76.6531], zoom: 12 },
+  { nombre: 'Istmina', centro: [5.1593, -76.6855], zoom: 13 },
+  { nombre: 'Sipí', centro: [4.6532, -76.6441], zoom: 14 },
+  { nombre: 'San José del Palmar', centro: [4.895, -76.235], zoom: 13 },
+  { nombre: 'Manizales', centro: [5.0669, -75.5067], zoom: 12 },
+  { nombre: 'Pereira', centro: [4.8143, -75.6947], zoom: 12 },
+  { nombre: 'Dosquebradas', centro: [4.834, -75.6713], zoom: 13 },
+  { nombre: 'La Virginia', centro: [4.8996, -75.8826], zoom: 14 },
+  { nombre: 'Armenia', centro: [4.5363, -75.6724], zoom: 12 },
+  { nombre: 'Cartago', centro: [4.7465, -75.9121], zoom: 13 },
+  { nombre: 'La Unión', centro: [4.5319, -76.1032], zoom: 13 },
+  { nombre: 'Roldanillo', centro: [4.4091, -76.1544], zoom: 13 },
+  { nombre: 'Zarzal', centro: [4.3939, -76.0706], zoom: 13 },
+  { nombre: 'Calima Darién', centro: [3.9318, -76.4842], zoom: 13 },
+  { nombre: 'Buenaventura', centro: [3.8882, -77.0738], zoom: 12 },
+  { nombre: 'Cali', centro: [3.452, -76.5325], zoom: 12 },
+  { nombre: 'Popayán', centro: [2.4422, -76.6072], zoom: 12 },
   { nombre: 'Otra', centro: null, zoom: null },
 ];
 
 export const NOMBRES_CIUDADES = CIUDADES.map((c) => c.nombre);
 
 /** Encuadre inicial: toda la región afectada (Chocó - Eje Cafetero - Valle). */
-export const VISTA_INICIAL = { centro: [4.7, -76.2], zoom: 8 };
+export const VISTA_INICIAL = { centro: [4.07, -76.29], zoom: 7 };
 
 /** Tras 48 h sin actualizarse, un reporte se considera caducado. */
 export const HORAS_CADUCIDAD = 48;

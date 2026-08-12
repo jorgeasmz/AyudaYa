@@ -175,9 +175,10 @@ Ningún componente hace peticiones directamente: todo pasa por `lib/api.js`.
 
 | Qué | Dónde |
 | --- | --- |
-| Añadir una ciudad | `CIUDADES` en `constantes.js`. No hay que tocar SQL |
+| Añadir un municipio | `CIUDADES` en `constantes.js`, con las coordenadas del casco urbano (no del centroide del límite municipal, que en municipios rurales cae en el campo). No hay que tocar SQL |
 | Añadir un tipo de reporte | `TIPOS_REPORTE` en `constantes.js` y `alter type tipo_reporte add value` (ver `mascotas` como ejemplo) |
-| Comprobar la instalación | `supabase/diagnostico.sql` en el SQL Editor: ocho comprobaciones, todas deben dar `t` |
+| Comprobar la instalación | `supabase/diagnostico.sql` en el SQL Editor: diez comprobaciones, todas deben dar `t` |
+| Borrar todos los datos | `supabase/borrar-datos.sql`. Arranca en simulación: hay que cambiar `rollback;` por `commit;` |
 | Revisar el código antes de desplegar | `npm run lint`. Vite compila aunque una variable no exista; ESLint no |
 | Umbral de ocultado automático | Tres sitios que deben coincidir: las dos policies `lectura_publica_*` y `UMBRAL_OCULTAR` |
 | Límite de envíos por IP | Argumentos de `privado.exigir_limite()` en el esquema |

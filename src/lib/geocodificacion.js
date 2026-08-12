@@ -60,13 +60,20 @@ function detalle(resultado) {
 }
 
 /**
+ * Radio de la caja de búsqueda alrededor del municipio elegido, en grados.
+ * 0,4 son unos 44 km: cubre de sobra el casco urbano y su entorno rural sin
+ * llegar al departamento vecino.
+ */
+const RADIO_CAJA = 0.4;
+
+/**
  * Busca direcciones y lugares.
  *
  * @param {string} texto      lo que se está escribiendo
- * @param {object} opciones   { ciudad, señal }
+ * @param {object} opciones   { ciudad, centro, señal }
  * @returns {Promise<Array>}  sugerencias listas para pintar
  */
-export async function buscarDirecciones(texto, { ciudad, señal } = {}) {
+export async function buscarDirecciones(texto, { ciudad, centro, señal } = {}) {
   const termino = String(texto || '').trim();
   if (termino.length < 4) return [];
 
@@ -85,6 +92,18 @@ export async function buscarDirecciones(texto, { ciudad, señal } = {}) {
   url.searchParams.set('countrycodes', 'co');
   url.searchParams.set('accept-language', 'es');
   url.searchParams.set('dedupe', '1');
+
+  // Acotar a una caja alrededor del municipio no es un lujo: hay nombres
+  // repetidos en varios departamentos. "La Unión" sin acotar resuelve a Sucre,
+  // a 700 km, y el reporte acabaría al otro lado del país.
+  if (centro) {
+    const [lat, lng] = centro;
+    url.searchParams.set(
+      'viewbox',
+      [lng - RADIO_CAJA, lat + RADIO_CAJA, lng + RADIO_CAJA, lat - RADIO_CAJA].join(',')
+    );
+    url.searchParams.set('bounded', '1');
+  }
 
   const respuesta = await fetch(url, { signal: señal });
   if (!respuesta.ok) throw new Error('No pudimos buscar la dirección ahora mismo.');
